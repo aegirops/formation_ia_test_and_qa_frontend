@@ -1,284 +1,280 @@
-# E2E Testing with Playwright - Best Practices Guide
+# Playwright Page Object Model (POM) Test Suite
 
-This guide provides essential best practices for writing reliable end-to-end tests with Playwright, focusing on avoiding common click issues and improving test stability.
+This test suite implements the Page Object Model (POM) architecture for testing the [Nuxt Dashboard Template](https://dashboard-template.nuxt.dev/).
 
-## 🎯 Locator Strategy Hierarchy
+## Architecture Overview
 
-Use locators in this priority order for maximum reliability:
+The POM architecture separates the test logic from the page-specific logic, making tests more maintainable and reusable.
 
-### 1. **BEST: Semantic Locators** (Accessible to users)
+### Directory Structure
 
-```typescript
-await page.getByRole("button", { name: "Send" });
-await page.getByRole("link", { name: "Inbox" });
-await page.getByLabel("Email address");
+```
+e2e/
+├── pages/           # Page Object classes
+│   ├── BasePage.ts      # Base class with common elements
+│   ├── HomePage.ts      # Home/Dashboard page
+│   ├── InboxPage.ts     # Inbox page
+│   ├── CustomersPage.ts # Customers page
+│   ├── SettingsPage.ts  # Settings page
+│   └── index.ts         # Export all page objects
+├── tests/           # Test files
+│   ├── home.spec.ts         # Home page tests
+│   ├── inbox.spec.ts        # Inbox page tests
+│   ├── customers.spec.ts    # Customers page tests
+│   ├── settings.spec.ts     # Settings page tests
+│   └── navigation.spec.ts   # Cross-page navigation tests
+└── README.md        # This file
 ```
 
-### 2. **GOOD: User-visible Text**
+## Page Object Classes
+
+### BasePage
+
+The base class contains common elements and functionality shared across all pages:
+
+- Sidebar navigation (Home, Inbox, Customers, Settings)
+- Header elements (Search, User menu, Collapse sidebar)
+- Cookie banner handling
+- Common navigation methods
+- URL and title verification methods
+
+### HomePage
+
+Handles the dashboard/home page functionality:
+
+- Stats cards (Customers, Conversions, Revenue, Orders)
+- Revenue chart
+- Orders table
+- Date range picker
+- Period selector
+- Navigation to other sections via stats cards
+
+### InboxPage
+
+Manages the inbox/email functionality:
+
+- Email list display
+- Tab switching (All/Unread)
+- Email selection and interaction
+- Email content verification
+- Search and filtering capabilities
+
+### CustomersPage
+
+Handles customer management features:
+
+- Customer table with pagination
+- Search and filtering
+- Customer selection (individual and bulk)
+- Status filtering
+- CRUD operations (New customer, Delete)
+- Table data extraction and verification
+
+### SettingsPage
+
+Manages settings and profile functionality:
+
+- Settings navigation (General, Members, Notifications, Security)
+- Profile form fields (Name, Email, Username, Bio, Avatar)
+- Form validation and submission
+- Field value management
+- Settings subsection navigation
+
+## Test Files
+
+### home.spec.ts
+
+Tests for the home/dashboard page:
+
+- Page loading and structure verification
+- Stats cards display and data validation
+- Chart and table functionality
+- Navigation between sections
+- Interactive elements (date picker, period selector)
+
+### inbox.spec.ts
+
+Tests for the inbox functionality:
+
+- Email list display and structure
+- Tab switching between All/Unread
+- Email interaction and selection
+- Content verification and search
+- Email data extraction
+
+### customers.spec.ts
+
+Tests for customer management:
+
+- Table structure and data display
+- Search and filtering functionality
+- Customer selection and bulk operations
+- Pagination handling
+- CRUD operations
+- Data validation and verification
+
+### settings.spec.ts
+
+Tests for settings and profile management:
+
+- Form display and validation
+- Field interaction and data entry
+- Settings navigation between subsections
+- Profile data persistence
+- Form submission and validation
+
+### navigation.spec.ts
+
+Integration tests for cross-page navigation:
+
+- Complete navigation flow between all pages
+- Sidebar consistency across pages
+- Active state verification
+- External link handling
+- Cookie banner persistence
+- Page refresh handling
+
+## Key Features
+
+### 1. Inheritance Structure
+
+All page classes inherit from `BasePage`, providing:
+
+- Common navigation elements
+- Shared utility methods
+- Consistent interaction patterns
+
+### 2. Locator Management
+
+Each page object encapsulates its own locators:
+
+- Semantic element selection using roles and text
+- Robust selectors that are less brittle
+- Organized locator grouping by functionality
+
+### 3. Action Methods
+
+Page objects provide high-level action methods:
+
+- `navigateToX()` methods for navigation
+- `fillX()` methods for form interactions
+- `verifyX()` methods for assertions
+- `getX()` methods for data extraction
+
+### 4. Verification Methods
+
+Built-in verification methods for:
+
+- Page loading and structure
+- Data validation
+- Element visibility and state
+- URL and title verification
+
+### 5. Data Extraction
+
+Methods to extract and validate data:
+
+- Table data extraction
+- Form value retrieval
+- Dynamic content verification
+- List and collection handling
+
+## Usage Examples
+
+### Basic Page Navigation
 
 ```typescript
-await page.getByText("Alex Smith");
-await page.getByPlaceholder("Write your reply...");
+const homePage = new HomePage(page);
+await homePage.goto();
+await homePage.acceptCookies();
+await homePage.verifyPageLoaded();
+
+await homePage.navigateToCustomers();
+const customersPage = new CustomersPage(page);
+await customersPage.verifyPageLoaded();
 ```
 
-### 3. **ACCEPTABLE: Test IDs** (Current approach)
+### Form Interaction
 
 ```typescript
-await page.getByTestId("email-item-1");
-```
+const settingsPage = new SettingsPage(page);
+await settingsPage.goto();
 
-### 4. **AVOID: CSS Selectors, XPath**
-
-```typescript
-// Don't use these unless absolutely necessary
-await page.locator(".email-item");
-await page.locator('xpath=//div[@class="email-item"]');
-```
-
-## ⏱️ Wait for Element State (Fixing Click Issues)
-
-The most common cause of click failures is not waiting for elements to be ready. Always ensure elements are actionable:
-
-### ❌ Wrong Way
-
-```typescript
-await page.getByTestId("email-item-1").click(); // May fail if element not ready
-```
-
-### ✅ Correct Way
-
-```typescript
-// Option 1: Explicit wait
-await page.getByTestId("email-item-1").waitFor({ state: "visible" });
-await page.getByTestId("email-item-1").click();
-
-// Option 2: Using expect (recommended)
-await expect(page.getByTestId("email-item-1")).toBeVisible();
-await page.getByTestId("email-item-1").click();
-```
-
-## 📧 Improved Inbox Test Example
-
-```typescript
-import { test, expect } from "@playwright/test";
-
-test("inbox email selection and details", async ({ page }) => {
-  // Navigate using relative URL (baseURL configured)
-  await page.goto("/");
-
-  // Use semantic locator for navigation
-  await page.getByRole("link", { name: "Inbox" }).click();
-
-  // Wait for inbox to load
-  await expect(page.getByTestId("email-details-panel")).toBeHidden();
-
-  // Select first email with proper waiting
-  const firstEmail = page.getByTestId("email-item-1");
-  await expect(firstEmail).toBeVisible();
-  await firstEmail.click();
-
-  // Wait for email details to appear
-  await expect(page.getByTestId("email-details-panel")).toBeVisible();
-
-  // Verify specific content instead of long text blocks
-  await expect(page.getByTestId("email-details-panel")).toContainText(
-    "Alex Smith"
-  );
-  await expect(page.getByTestId("email-details-panel")).toContainText(
-    "Meeting Schedule"
-  );
-
-  // Select second email
-  const secondEmail = page.getByTestId("email-item-2");
-  await expect(secondEmail).toBeVisible();
-  await secondEmail.click();
-
-  // Verify second email content
-  await expect(page.getByTestId("email-details-panel")).toContainText(
-    "Jordan Brown"
-  );
-  await expect(page.getByTestId("email-details-panel")).toContainText(
-    "Sprint 3"
-  );
+await settingsPage.fillCompleteProfile({
+  name: "John Doe",
+  email: "john@example.com",
+  username: "johndoe",
+  bio: "Software developer",
 });
+
+await settingsPage.saveChanges();
 ```
 
-## 🐛 Debugging Click Issues
-
-When clicks don't work, use these debugging techniques:
+### Table Operations
 
 ```typescript
-test("debug click issues", async ({ page }) => {
-  await page.goto("/inbox");
+const customersPage = new CustomersPage(page);
+await customersPage.goto();
 
-  const emailItem = page.getByTestId("email-item-1");
-
-  // Check element states
-  await expect(emailItem).toBeAttached();
-  await expect(emailItem).toBeVisible();
-  await expect(emailItem).toBeEnabled();
-
-  // Visual debugging
-  await page.screenshot({ path: "before-click.png" });
-  await emailItem.highlight();
-
-  // Get element information
-  const boundingBox = await emailItem.boundingBox();
-  console.log("Element position:", boundingBox);
-
-  // Perform click
-  await emailItem.click();
-
-  // Verify result
-  await page.screenshot({ path: "after-click.png" });
-});
+await customersPage.searchCustomers("Alex Smith");
+await customersPage.selectCustomerByIndex(0);
+await customersPage.clickDeleteButton();
 ```
 
-## 🔄 Handling Dynamic Content
-
-For dynamic content like email lists:
+### Data Validation
 
 ```typescript
-// Wait for specific number of emails
-await expect(page.getByTestId(/email-item-\d+/)).toHaveCount(20);
+const homePage = new HomePage(page);
+await homePage.goto();
 
-// Wait for first email to appear
-await page.getByTestId("email-item-1").waitFor();
+const customersValue = await homePage.getCustomersValue();
+const customersChange = await homePage.getCustomersChange();
 
-// Use flexible locators
-const firstEmailInList = page.locator('[data-testid^="email-item-"]').first();
-await firstEmailInList.click();
+expect(customersValue).toBeTruthy();
+expect(customersChange).toMatch(/[+-]\d+%/);
 ```
 
-## 🎛️ Enhanced Playwright Configuration
+## Best Practices Implemented
 
-Update `playwright.config.ts` for better debugging:
+1. **Single Responsibility**: Each page object handles only its own page
+2. **DRY Principle**: Common functionality is inherited from BasePage
+3. **Descriptive Naming**: Clear, descriptive method and property names
+4. **Robust Selectors**: Using semantic selectors (roles, text) over CSS selectors
+5. **Async/Await**: Proper handling of asynchronous operations
+6. **Error Handling**: Built-in verification methods for robust testing
+7. **Modularity**: Organized structure with clear separation of concerns
 
-```typescript
-export default defineConfig({
-  use: {
-    baseURL: "http://localhost:3000",
-    trace: "retain-on-failure", // Keep traces on failure
-    screenshot: "only-on-failure", // Screenshots on failure
-    video: "retain-on-failure", // Videos on failure
-  },
-
-  timeout: 30000, // Test timeout
-  expect: {
-    timeout: 10000, // Assertion timeout
-  },
-});
-```
-
-## 🏗️ Page Object Model (Advanced)
-
-For larger test suites, organize tests with Page Object Model:
-
-```typescript
-// pages/inbox-page.ts
-export class InboxPage {
-  constructor(private page: Page) {}
-
-  async navigateToInbox() {
-    await this.page.getByRole("link", { name: "Inbox" }).click();
-  }
-
-  async selectEmail(emailId: number) {
-    const email = this.page.getByTestId(`email-item-${emailId}`);
-    await expect(email).toBeVisible();
-    await email.click();
-  }
-
-  async expectEmailDetailsVisible(senderName: string) {
-    await expect(this.page.getByTestId("email-details-panel")).toContainText(
-      senderName
-    );
-  }
-}
-
-// In test file
-test("inbox functionality", async ({ page }) => {
-  const inboxPage = new InboxPage(page);
-
-  await page.goto("/");
-  await inboxPage.navigateToInbox();
-  await inboxPage.selectEmail(1);
-  await inboxPage.expectEmailDetailsVisible("Alex Smith");
-});
-```
-
-## ⚠️ Common Click Issues & Solutions
-
-| Issue                 | Cause                       | Solution                                    |
-| --------------------- | --------------------------- | ------------------------------------------- |
-| Element not found     | Element not loaded yet      | Add `waitFor()` or `expect().toBeVisible()` |
-| Element covered       | Another element overlapping | Use `force: true` or scroll into view       |
-| Element not clickable | Element disabled or hidden  | Check `toBeEnabled()` and `toBeVisible()`   |
-| Timing issues         | Race conditions             | Use auto-waiting with `expect()`            |
-| Wrong element clicked | Imprecise locator           | Use more specific locators                  |
-| Flaky tests           | Inconsistent element state  | Add proper waits and assertions             |
-
-## 🚀 Component Testing Best Practices
-
-Enhance Vue components for better testability:
-
-```vue
-<!-- Add semantic attributes to components -->
-<div
-  :data-testid="`email-item-${mail.id}`"
-  :aria-label="`Email from ${mail.from.name}: ${mail.subject}`"
-  role="button"
-  tabindex="0"
-  @click="selectedMail = mail"
-  @keydown.enter="selectedMail = mail"
-  @keydown.space="selectedMail = mail"
->
-```
-
-This enables semantic locators:
-
-```typescript
-await page.getByRole("button", { name: /Email from Alex Smith/ }).click();
-```
-
-## 📝 Test Writing Checklist
-
-Before writing tests, ensure:
-
-- [ ] Use semantic locators when possible
-- [ ] Add explicit waits for dynamic content
-- [ ] Use `expect()` assertions for element states
-- [ ] Keep assertions specific and focused
-- [ ] Add proper error handling and debugging
-- [ ] Use relative URLs with baseURL
-- [ ] Structure tests with clear arrange/act/assert pattern
-
-## 🔍 Running and Debugging Tests
+## Running Tests
 
 ```bash
 # Run all tests
-npx playwright test
+npx playwright test e2e/
 
 # Run specific test file
-npx playwright test inbox-record.spec.ts
+npx playwright test e2e/tests/home.spec.ts
 
-# Run tests in headed mode (see browser)
-npx playwright test --headed
+# Run tests in headed mode
+npx playwright test e2e/ --headed
 
-# Run tests in debug mode
-npx playwright test --debug
-
-# Generate test report
-npx playwright show-report
+# Run tests with UI
+npx playwright test e2e/ --ui
 ```
 
-## 📚 Additional Resources
+## Configuration
 
-- [Playwright Documentation](https://playwright.dev/)
-- [Best Practices Guide](https://playwright.dev/docs/best-practices)
-- [Locators Guide](https://playwright.dev/docs/locators)
-- [Auto-waiting](https://playwright.dev/docs/actionability)
+The tests are configured to work with the existing Playwright configuration in the project. Make sure to:
 
----
+1. Install dependencies: `npm install`
+2. Install browsers: `npx playwright install`
+3. Run tests: `npx playwright test e2e/`
 
-**Remember**: The key to reliable E2E tests is proper waiting and using the right locators. Always wait for elements to be in the correct state before interacting with them.
+## Maintenance
+
+When the application changes:
+
+1. **UI Changes**: Update locators in the relevant page object
+2. **New Features**: Add new methods to the appropriate page object
+3. **New Pages**: Create new page object classes following the same pattern
+4. **Common Changes**: Update BasePage for changes affecting all pages
+
+This POM architecture provides a solid foundation for scalable, maintainable end-to-end testing of the Nuxt Dashboard Template.

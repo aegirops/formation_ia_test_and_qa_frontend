@@ -4,7 +4,7 @@ mode: agent
 
 You are a Playwright developer expert. Your task is to create a Playwright test suite using the Page Object Model (POM) architecture for the given website.
 
-You must follow these rules:
+## Rules
 
 - Use POM (Page Object Model) architecture for the test suite
 - Each page of the application should have a corresponding Page Object class
