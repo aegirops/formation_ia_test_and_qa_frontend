@@ -41,57 +41,83 @@ export class HomePage extends BasePage {
       .getByRole("combobox")
       .filter({ hasText: "daily" });
 
-    // Stats cards
-    this.customersCard = page
-      .locator("div")
-      .filter({ hasText: /^Customers\d+/ })
-      .first();
-    this.customersValue = this.customersCard
+    // Stats cards - use first() to select the stats card version over chart version
+    const mainContent = page.locator("[id^='dashboard-panel']");
+
+    this.customersCard = mainContent
+      .getByText("Customers", { exact: true })
+      .first()
+      .locator("../../..");
+    this.customersValue = mainContent
+      .getByText("Customers", { exact: true })
+      .first()
+      .locator("../..")
       .locator("div")
       .filter({ hasText: /^\d+$/ })
       .first();
-    this.customersChange = this.customersCard
+    this.customersChange = mainContent
+      .getByText("Customers", { exact: true })
+      .first()
+      .locator("../..")
       .locator("div")
-      .filter({ hasText: /[+-]\d+%/ })
+      .filter({ hasText: /[+-]?\d+%$/ })
       .first();
 
-    this.conversionsCard = page
-      .locator("div")
-      .filter({ hasText: /^Conversions\d+/ })
-      .first();
-    this.conversionsValue = this.conversionsCard
+    this.conversionsCard = mainContent
+      .getByText("Conversions", { exact: true })
+      .first()
+      .locator("../../..");
+    this.conversionsValue = mainContent
+      .getByText("Conversions", { exact: true })
+      .first()
+      .locator("../..")
       .locator("div")
       .filter({ hasText: /^\d+$/ })
       .first();
-    this.conversionsChange = this.conversionsCard
+    this.conversionsChange = mainContent
+      .getByText("Conversions", { exact: true })
+      .first()
+      .locator("../..")
       .locator("div")
-      .filter({ hasText: /[+-]\d+%/ })
+      .filter({ hasText: /[+-]?\d+%$/ })
       .first();
 
-    this.revenueCard = page
-      .locator("div")
-      .filter({ hasText: /^Revenue\$/ })
-      .first();
-    this.revenueValue = this.revenueCard
+    this.revenueCard = mainContent
+      .getByText("Revenue", { exact: true })
+      .first()
+      .locator("../../..");
+    this.revenueValue = mainContent
+      .getByText("Revenue", { exact: true })
+      .first()
+      .locator("../..")
       .locator("div")
       .filter({ hasText: /^\$[\d,]+$/ })
       .first();
-    this.revenueChange = this.revenueCard
+    this.revenueChange = mainContent
+      .getByText("Revenue", { exact: true })
+      .first()
+      .locator("../..")
       .locator("div")
-      .filter({ hasText: /[+-]\d+%/ })
+      .filter({ hasText: /[+-]?\d+%$/ })
       .first();
 
-    this.ordersCard = page
-      .locator("div")
-      .filter({ hasText: /^Orders\d+/ })
-      .first();
-    this.ordersValue = this.ordersCard
+    this.ordersCard = mainContent
+      .getByText("Orders", { exact: true })
+      .first()
+      .locator("../../..");
+    this.ordersValue = mainContent
+      .getByText("Orders", { exact: true })
+      .first()
+      .locator("../..")
       .locator("div")
       .filter({ hasText: /^\d+$/ })
       .first();
-    this.ordersChange = this.ordersCard
+    this.ordersChange = mainContent
+      .getByText("Orders", { exact: true })
+      .first()
+      .locator("../..")
       .locator("div")
-      .filter({ hasText: /[+-]\d+%/ })
+      .filter({ hasText: /[+-]?\d+%$/ })
       .first();
 
     // Revenue chart
@@ -103,7 +129,7 @@ export class HomePage extends BasePage {
       .locator("p")
       .filter({ hasText: /^\$[\d,]+$/ })
       .first();
-    this.revenueChart = page.locator("figure img");
+    this.revenueChart = page.locator("figure").first();
 
     // Orders table
     this.ordersTable = page.getByRole("table");
@@ -119,6 +145,7 @@ export class HomePage extends BasePage {
     await expect(this.pageHeading).toBeVisible();
     await expect(this.dateRangePicker).toBeVisible();
     await expect(this.periodSelector).toBeVisible();
+    await this.waitForPageLoad();
   }
 
   async verifyStatsCards() {
@@ -197,11 +224,28 @@ export class HomePage extends BasePage {
   async clickStatsCardLink(
     cardType: "customers" | "conversions" | "revenue" | "orders"
   ) {
+    const mainContent = this.page.locator("[id^='dashboard-panel']");
     const cardLinks = {
-      customers: this.customersCard.getByRole("link"),
-      conversions: this.conversionsCard.getByRole("link"),
-      revenue: this.revenueCard.getByRole("link"),
-      orders: this.ordersCard.getByRole("link"),
+      customers: mainContent
+        .getByText("Customers", { exact: true })
+        .first()
+        .locator("../../..")
+        .getByRole("link"),
+      conversions: mainContent
+        .getByText("Conversions", { exact: true })
+        .first()
+        .locator("../../..")
+        .getByRole("link"),
+      revenue: mainContent
+        .getByText("Revenue", { exact: true })
+        .first()
+        .locator("../../..")
+        .getByRole("link"),
+      orders: mainContent
+        .getByText("Orders", { exact: true })
+        .first()
+        .locator("../../..")
+        .getByRole("link"),
     };
 
     await cardLinks[cardType].click();

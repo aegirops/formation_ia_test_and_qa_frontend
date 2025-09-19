@@ -32,11 +32,12 @@ export class BasePage {
       name: "Benjamin Canac Benjamin Canac",
     });
 
-    // Main navigation
-    this.homeLink = page.getByRole("link", { name: "Home" });
-    this.inboxLink = page.getByRole("link", { name: /Inbox.*\d+/ });
-    this.customersLink = page.getByRole("link", { name: "Customers" });
-    this.settingsButton = page.getByRole("button", { name: "Settings" });
+    // Main navigation (scope to sidebar to avoid conflicts with stats cards)
+    const mainNav = page.getByRole("navigation", { name: "Main" }).first();
+    this.homeLink = mainNav.getByRole("link", { name: "Home" });
+    this.inboxLink = mainNav.getByRole("link", { name: /Inbox.*\d+/ });
+    this.customersLink = mainNav.getByRole("link", { name: "Customers" });
+    this.settingsButton = mainNav.getByRole("button", { name: "Settings" });
 
     // Settings submenu
     this.settingsGeneralLink = page.getByRole("link", { name: "General" });

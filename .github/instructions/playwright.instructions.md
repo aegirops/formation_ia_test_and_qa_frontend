@@ -26,3 +26,7 @@ Use the most stable and intention-revealing locators, in this order:
 8. XPath (avoid unless absolutely necessary)
 
 _Prefer high-level locators (test IDs, roles, labels); avoid brittle selectors like XPath or unstable class names._
+
+## Run test rules
+
+- When the user ask to run a test, run the test headless (avoid starting browser)
